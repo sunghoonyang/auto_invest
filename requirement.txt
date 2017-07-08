@@ -1,0 +1,4 @@
+pyalgotrade==0.18
+backtrader==1.9.51.121
+seaborn==0.7.1
+pymysql==0.7.11
