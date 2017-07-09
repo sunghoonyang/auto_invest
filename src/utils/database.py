@@ -75,11 +75,17 @@ class dbMeta(object):
         batch_size = int(len(global_stocks) / 200) + 1
         dups = cls.get_today_data()
         dups.drop(['LOAD_DT', 'QUERY_DT', 'SEQ'], axis=1, inplace=True, errors='ignore')
+
+        # df, inserted_rows = None, 0
         for i in range(0, batch_size):
             lower, upper = i * 200, min((i + 1) * 200, len(global_stocks))
             df = dbMeta.get_market_eye_res(global_stocks[lower:upper])
             df['시간'] = df['시간'].apply(pd.to_numeric)
             pks = ['종목코드', '시간']
+            """
+            TODO: do merge once by first appending all dataframes,
+            and left outer join with dups AFTER the for loop iteration
+            """
             df = df.merge(dups
                           , how='left'
                           , on=pks
@@ -90,12 +96,13 @@ class dbMeta(object):
             df.drop(drop_cols, axis=1, inplace=True, errors='ignore')
             rename_cols = {c: c[:-2] for c in df.columns.values if c.endswith('_L')}
             df.rename(columns=rename_cols, inplace=True)
+            inserted_rows = df.shape[0]
             df.to_sql('market_eye_today'
                       , engine
                       , if_exists='append'
                       , index=False
                       )
-        ct_obj = None
+        return inserted_rows
 
 
     @classmethod
