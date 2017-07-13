@@ -33,16 +33,15 @@ if today.weekday() in (5, 6):
     logger.error("does not operate on the weekends.")
     exit()
 
+last_etl_dt = today - timedelta(days=3) if today.weekday() == 1 else today - timedelta(days=1)
 
 """     SET UP DATE PARAMS    """
-yesterday = today - timedelta(days=1)
 market_open = datetime.combine(today, datetime.min.time()) + timedelta(hours=9)
 market_close = datetime.combine(today, datetime.min.time()) + timedelta(hours=15, minutes=30)
 
-
 """     REMOVE YESTERDAY'S DATA FROM cybos.market_eye_today and INSERT TO cybos.market_eye_history     """
 logger.info('Migrating data from cybos.market_eye_today to cybos.market_eye_history.')
-inserted = dbMeta.call_proc('sp_market_eye_today_to_history', [int(today.strftime('%Y%m%d'))])
+inserted = dbMeta.call_proc('sp_market_eye_today_to_history', [int(last_etl_dt.strftime('%Y%m%d'))])
 logger.info('%d rows inserted to cybos.market_eye_history.' % inserted[0])
 
 while True:

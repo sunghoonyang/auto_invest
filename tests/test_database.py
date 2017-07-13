@@ -20,7 +20,7 @@ class TestDatabase(unittest.TestCase):
     def tearDown(self):
         self.ct_obj = None
 
-    # @unittest.skip
+    @unittest.skip
     def test_00_get_market_eye_res(self):
         df = dbMeta.get_market_eye_res(self.test_stock_codes)
         print(df.head(20))
@@ -44,3 +44,7 @@ class TestDatabase(unittest.TestCase):
         engine = dbMeta.get_mysql_engine()
         res = dbMeta.execute_sql(engine, sql)
         self.assertEqual(len(res), 863)
+
+    def test_04_get_krx_stock_list(self):
+        df = dbMeta.get_krx_stock_list('코스피')
+        print(df.head(10))

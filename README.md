@@ -1,6 +1,6 @@
-#Stock Investment Automation
+#Stock Investment Automation#
 
-##Tools:
+##Tools:##
 * Cybos Plus ( src/cybos_talker ) is a API service provided by Daishin 
 * Backtrader is a backtesting library for your sell N' buy strategies, and live trading ( src/backtester )
 * Standard Anaconda libraries for data analysis ( jupyter_notebook/ )

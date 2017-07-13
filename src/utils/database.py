@@ -73,10 +73,11 @@ class dbMeta(object):
         stock_list = ct_obj.get_domestic_stock_list()
         global_stocks = list(stock_list.values())
         batch_size = int(len(global_stocks) / 200) + 1
-        dups = cls.get_today_data()
+        dups = cls.get_today_data(pk_only=True)
         dups.drop(['LOAD_DT', 'QUERY_DT', 'SEQ'], axis=1, inplace=True, errors='ignore')
 
         # df, inserted_rows = None, 0
+        inserted_rows = 0
         for i in range(0, batch_size):
             lower, upper = i * 200, min((i + 1) * 200, len(global_stocks))
             df = dbMeta.get_market_eye_res(global_stocks[lower:upper])
@@ -96,7 +97,7 @@ class dbMeta(object):
             df.drop(drop_cols, axis=1, inplace=True, errors='ignore')
             rename_cols = {c: c[:-2] for c in df.columns.values if c.endswith('_L')}
             df.rename(columns=rename_cols, inplace=True)
-            inserted_rows = df.shape[0]
+            inserted_rows += df.shape[0]
             df.to_sql('market_eye_today'
                       , engine
                       , if_exists='append'
@@ -106,15 +107,22 @@ class dbMeta(object):
 
 
     @classmethod
-    def get_today_data(cls):
+    def get_today_data(cls, pk_only=False):
+        pk_only_stmt = """
+        `종목코드`
+        , `시간`
+        , 1 as 현재가
+        """
+        select_stmt = '*' if not pk_only else pk_only_stmt
         sql = """
         SELECT 
-            * 
+            {select_stmt}
             FROM cybos.market_eye_today
-        """
+        """.format(select_stmt=select_stmt)
         engine = dbMeta.get_mysql_engine()
         df = pd.read_sql(sql, engine)
         return df
+
 
     @classmethod
     def call_proc(cls, proc_name, args=None):
@@ -131,3 +139,22 @@ class dbMeta(object):
             connection.rollback()
             connection.close()
             raise
+
+    @classmethod
+    def get_krx_stock_list(cls, type=None):
+        sql = """
+        SELECT 
+            `종목코드`,
+            `종목명`,
+            `주식시장타입` 
+        FROM cybos.dim_krx_stock
+        WHERE 1=1
+        AND use_yn = 'Y'
+        {stock_type}
+        GROUP BY 1, 2, 3
+        """
+        stock_type = "AND  `주식시장타입` = '{type}'".format(type=type) if type else ''
+        sql = sql.format(stock_type=stock_type)
+        engine = dbMeta.get_mysql_engine()
+        df = pd.read_sql(sql, engine)
+        return df

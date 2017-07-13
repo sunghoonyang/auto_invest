@@ -165,6 +165,7 @@ CREATE TABLE cybos.market_eye_today (
     PRIMARY KEY (SEQ),
     UNIQUE KEY `stock_at_t` (`종목코드`, `현지날짜`, `시간`)
 )
+ENGINE = INNODB
 ;
 
 DROP TABLE IF EXISTS cybos.market_eye_history
@@ -352,4 +353,80 @@ FROM
 WHERE
 	`현지날짜` = ADDDATE(CURRENT_DATE(), INTERVAL -1 DAY)
 ORDER BY `종목코드`, `현지날짜`, `시간` ASC
+;
+
+DROP TABLE IF EXISTS cybos.dim_krx_stock
+;
+
+CREATE TABLESPACE `ts_krx_1` ADD DATAFILE 'ts_krx_1.ibd' FILE_BLOCK_SIZE = 8192 Engine=InnoDB
+;
+
+CREATE TABLE cybos.dim_krx_stock (
+	`종목코드` int,
+    `종목명` varchar(128),
+	`주식시장타입` varchar(48),
+    PRIMARY KEY (`종목코드`)
+)
+;
+
+-- for data ingestion from api
+CREATE TABLE cybos.`tbl_dailystock` (
+  `item_cd` varchar(128) DEFAULT NULL,
+  `day_Date` varchar(128) DEFAULT NULL,
+  `day_Dungrak` varchar(128) DEFAULT NULL,
+  `day_EndPrice` varchar(128) DEFAULT NULL,
+  `day_High` varchar(128) DEFAULT NULL,
+  `day_Low` varchar(128) DEFAULT NULL,
+  `day_Start` varchar(128) DEFAULT NULL,
+  `day_Volume` varchar(128) DEFAULT NULL,
+  `day_getAmount` varchar(128) DEFAULT NULL,
+  `day_getDebi` varchar(128) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8
+;
+
+-- for data ingestion from api
+CREATE TABLE `tbl_timeconclude` (
+  `item_cd` varchar(255) DEFAULT NULL,
+  `Debi` varchar(255) DEFAULT NULL,
+  `Dungrak` varchar(255) DEFAULT NULL,
+  `amount` varchar(255) DEFAULT NULL,
+  `buyprice` varchar(255) DEFAULT NULL,
+  `negoprice` varchar(255) DEFAULT NULL,
+  `sellprice` varchar(255) DEFAULT NULL,
+  `time` varchar(255) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8
+;
+
+CREATE TABLE cybos.krx_dailystock_history (
+    seq bigint auto_increment,
+    `code` MEDIUMINT,
+    `day_Date` TIMESTAMP,
+    `day_Dungrak` SMALLINT,
+    `day_EndPrice` numeric(11, 2),
+    `day_High` numeric(11, 2),
+    `day_Low` numeric(11, 2),
+    `day_Start` numeric(11, 2),
+    `day_Volume` numeric(11, 2),
+    `day_getAmount`BIGINT,
+    `day_getDebi` MEDIUMINT,
+    PRIMARY KEY (seq),
+    UNIQUE KEY `stock_at_t` (`code`, `day_date`)
+)
+TABLESPACE ts_krx_1 ROW_FORMAT=COMPRESSED KEY_BLOCK_SIZE=8
+;
+
+CREATE TABLE cybos.krx_timeconclude_history (
+    seq bigint auto_increment,
+    `code` mediumint,
+    `Debi` SMALLINT,
+    `Dungrak` TINYINT,
+    `amount` INT,
+    `buyprice` decimal(11, 2),
+    `negoprice` decimal(11, 2),
+    `sellprice` decimal(11, 2),
+    `time` TIMESTAMP,
+    PRIMARY KEY(SEQ),
+    UNIQUE KEY(`code`, `time`)
+)
+TABLESPACE ts_krx_1 ROW_FORMAT=COMPRESSED KEY_BLOCK_SIZE=8
 ;
