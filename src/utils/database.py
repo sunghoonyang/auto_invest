@@ -125,7 +125,7 @@ class dbMeta(object):
 
 
     @classmethod
-    def call_proc(cls, proc_name, args=None):
+    def call_proc(cls, proc_name, args=()):
         try:
             connection = cls.get_mysql_engine().raw_connection()
             cursor = connection.cursor()

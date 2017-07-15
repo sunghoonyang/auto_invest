@@ -141,10 +141,6 @@ class CybosTalker(object):
             '저가': 'Low',
             '종가': 'Close',
             'datetime': 'Date',
-            # '전일대비': 'Delta',
-            # '외국인현보유비율': 'FO',  # Foreigner Ownership
-            # '등락비율': 'ADR',
-            # '주식회전율': 'TO', # Stock Turnover
         }
         stk_chrt = stk_chrt.rename(columns=eng_col_converter)
         stk_chrt.sort_values('Date', inplace=True)

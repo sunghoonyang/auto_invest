@@ -50,8 +50,8 @@ CREATE PROCEDURE cybos.sp_krx_today_to_history()
         FROM `cybos`.`tbl_dailystock`
         GROUP BY 1, 2
         ;
-        TRUNCATE TABLE cybos.krx_dailystock_history;
         SELECT @dailystock_insert_rec := ROW_COUNT();
+        TRUNCATE TABLE cybos.krx_dailystock_history;
         INSERT INTO cybos.krx_timeconclude_history
             (`code`, `time`, Debi, Dungrak, amount, buyprice, negoprice, sellprice)
         SELECT
@@ -66,8 +66,8 @@ CREATE PROCEDURE cybos.sp_krx_today_to_history()
         FROM `cybos`.`tbl_timeconclude`
         GROUP BY 1, 2
         ;
-        TRUNCATE TABLE cybos.krx_timeconclude_history;
         SELECT @timeconclude_insert_rec := ROW_COUNT();
+        TRUNCATE TABLE cybos.krx_timeconclude_history;
         SELECT @timeconclude_insert_rec as time_conclude, @dailystock_insert_rec as dailystock;
         END;
     END;

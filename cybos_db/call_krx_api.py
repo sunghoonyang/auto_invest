@@ -40,10 +40,6 @@ last_etl_dt = today - timedelta(days=3) if today.weekday() == 1 else today - tim
 market_open = datetime.combine(today, datetime.min.time()) + timedelta(hours=9)
 market_close = datetime.combine(today, datetime.min.time()) + timedelta(hours=15, minutes=30)
 
-"""     REMOVE YESTERDAY'S DATA FROM cybos.market_eye_today and INSERT TO cybos.market_eye_history     """
-# logger.info('Migrating data from cybos.market_eye_today to cybos.market_eye_history.')
-# inserted = dbMeta.call_proc('sp_krx_today_to_history', [int(last_etl_dt.strftime('%Y%m%d'))])
-# logger.info('%d rows inserted to cybos.market_eye_history.' % inserted[0])
 
 while True:
     now = datetime.now()
@@ -63,3 +59,8 @@ while True:
         logger.debug('Stock market closed, exiting ...')
         exit(0)
 
+"""     REMOVE YESTERDAY'S DATA FROM cybos.market_eye_today and INSERT TO cybos.market_eye_history     """
+logger.info('Migrating data krx data to history table.')
+inserted = dbMeta.call_proc('cybos.sp_krx_today_to_history')
+logger.info('%d and %d rows inserted to '
+            'krx_dailystock_history and krx_timeconclude_history respectively.' % inserted[0:2])
