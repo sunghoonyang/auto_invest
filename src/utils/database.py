@@ -149,7 +149,7 @@ class dbMeta(object):
             `주식시장타입` 
         FROM cybos.dim_krx_stock
         WHERE 1=1
-        AND use_yn = 'Y'
+        -- AND use_yn = 'Y'
         {stock_type}
         GROUP BY 1, 2, 3
         """

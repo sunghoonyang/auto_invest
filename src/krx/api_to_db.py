@@ -17,7 +17,6 @@ class KrxApiTalker(object):
         code = str(np.asscalar(code))
         code = '0' * (6 - len(code)) + code
         code_request_url = "%s?code=%s" % (code_request_url, code)
-        print(code_request_url)
         opener = urllib.request.build_opener()
         request = urllib.request.Request(code_request_url)
         response = opener.open(request)
@@ -41,14 +40,16 @@ class KrxApiTalker(object):
             print(str(e))
             return None
         all_records = {}
-        for child in [child for child in root if child.tag in update_tbs]:
+        for child in [child for child in root if child.tag.lower() in update_tbs]:
             records = []
             for subchild in child:
                 row = {}
                 for name, value in subchild.items():
-                    row[name] = value
+                    if value == '':
+                        value = '0'
+                    row[name] = value.replace(',', '')
                 records.append(row)
-            key = str(child.tag)
+            key = str(child.tag.lower())
             all_records.update({key: records})
 
         return all_records
@@ -65,21 +66,21 @@ class KrxApiTalker(object):
             if not all_records:
                 continue # all_records returned zero due to xml parse error
             for k, v in all_records.items():
-                if k not in update_tbs:
+                if k.lower() not in update_tbs:
                     continue
                 if len(v) == 0:
                     print('%s returned an empty data set.' % stock_name)
                     break
                 stock_cd = {'item_cd': [c] * len(v)}
-                df = pd.concat([
-                                    pd.DataFrame(data=stock_cd, index=list(range(0, len(v))))
-                                    , pd.DataFrame(data=v)
-                                ]
-                               , axis=1)
-                df_dict[k] = df_dict[k].append(df, ignore_index=True)
+                df = pd.concat([pd.DataFrame(data=stock_cd, index=list(range(0, len(v))))
+                                , pd.DataFrame(data=v)]
+                                , axis=1
+                )
+                master = df_dict[k]
+                df_dict[k] = master.append(df, ignore_index=True)
         engine = dbMeta.get_mysql_engine()
         rc = {}
-        for tb, df in df_dict:
+        for tb, df in df_dict.items():
             df.to_sql(tb.lower()
                         , engine
                         , if_exists='append'

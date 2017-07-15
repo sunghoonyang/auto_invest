@@ -27,7 +27,7 @@ DELIMITER $$
 DROP PROCEDURE IF EXISTS cybos.sp_krx_today_to_history$$
 CREATE PROCEDURE cybos.sp_krx_today_to_history()
     BEGIN
-        DECLARE dailystock_insert_rec dailystock INT;
+        DECLARE dailystock_insert_rec INT;
         DECLARE timeconclude_insert_rec INT;
         DECLARE EXIT HANDLER FOR SQLEXCEPTION
             BEGIN
@@ -37,35 +37,38 @@ CREATE PROCEDURE cybos.sp_krx_today_to_history()
         INSERT INTO cybos.krx_dailystock_history
             (`code`, `day_Date`, `day_Dungrak`, `day_EndPrice`, `day_High`, `day_Low`, `day_Start`, `day_Volume`, `day_getAmount`, `day_getDebi`)
         SELECT
-            CAST(`tbl_dailystock`.`item_cd` AS UNSIGNED),
-            STR_TO_DATE(`tbl_dailystock`.`day_Date`, '%d/%m/%y'),
-            CAST(`day_EndPrice` AS DECIMAL(11, 2)),
-            CAST(`day_High` AS DECIMAL(11, 2)),
-            CAST(`day_Low` AS DECIMAL(11, 2)),
-            CAST(`day_Start` AS DECIMAL(11, 2)),
-            CAST(`day_Volume` AS DECIMAL(11, 2)),
-            CAST(`tbl_dailystock` AS UNSIGNED),
-            CAST(`day_getDebi` AS UNSIGNED)
+            `tbl_dailystock`.`item_cd`,
+            `tbl_dailystock`.`day_Date`,
+            `tbl_dailystock`.`day_Dungrak`,
+            `tbl_dailystock`.`day_EndPrice`,
+            `tbl_dailystock`.`day_High`,
+            `tbl_dailystock`.`day_Low`,
+            `tbl_dailystock`.`day_Start`,
+            `tbl_dailystock`.`day_Volume`,
+            `tbl_dailystock`.`day_getAmount`,
+            `tbl_dailystock`.`day_getDebi`
         FROM `cybos`.`tbl_dailystock`
         GROUP BY 1, 2
         ;
+        TRUNCATE TABLE cybos.krx_dailystock_history;
         SELECT @dailystock_insert_rec := ROW_COUNT();
         INSERT INTO cybos.krx_timeconclude_history
             (`code`, `time`, Debi, Dungrak, amount, buyprice, negoprice, sellprice)
         SELECT
-            CAST(CAST(`item_cd` AS DECIMAL(11, 0)) as UNSIGNED),
-            timestamp(concat(curdate(), ' ', `time`)) ,
-            CAST(CAST(`Debi` AS DECIMAL(11, 0)) as UNSIGNED),
-            CAST(CAST(`Dungrak` AS DECIMAL(11, 0)) as UNSIGNED),
-            CAST(CAST(`amount` AS DECIMAL(11, 0)) as UNSIGNED),
-            CAST(`buyprice` AS DECIMAL(11, 2)),
-            CAST(`negoprice` AS DECIMAL(11, 2)),
-            CAST(`sellprice` AS DECIMAL(11, 2))
+            `tbl_timeconclude`.`item_cd`,
+            timestamp(concat(ADDDATE(curdate(), -1), ' ', `time`)) ,
+            `tbl_timeconclude`.`Debi`,
+            `tbl_timeconclude`.`Dungrak`,
+            `tbl_timeconclude`.`amount`,
+            `tbl_timeconclude`.`buyprice`,
+            `tbl_timeconclude`.`negoprice`,
+            `tbl_timeconclude`.`sellprice`
         FROM `cybos`.`tbl_timeconclude`
         GROUP BY 1, 2
         ;
+        TRUNCATE TABLE cybos.krx_timeconclude_history;
         SELECT @timeconclude_insert_rec := ROW_COUNT();
-        SELECT @timeconclude_insert_rec, @dailystock_insert_rec;
+        SELECT @timeconclude_insert_rec as time_conclude, @dailystock_insert_rec as dailystock;
         END;
     END;
 $$
