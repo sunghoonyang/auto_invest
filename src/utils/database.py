@@ -158,3 +158,19 @@ class dbMeta(object):
         engine = dbMeta.get_mysql_engine()
         df = pd.read_sql(sql, engine)
         return df
+
+    @classmethod
+    def get_krx_latest_data(cls):
+        sql = """SELECT 
+            *
+        FROM cybos.krx_timeconclude_history
+        WHERE date(time) = (
+            SELECT 
+                max(date(time))
+            FROM cybos.krx_timeconclude_history
+        )
+        ;
+        """
+        engine = dbMeta.get_mysql_engine()
+        snapshot = pd.read_sql(sql, engine)
+        return snapshot
