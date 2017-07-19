@@ -13,9 +13,11 @@ class TestBackTrader(unittest.TestCase):
 
     def setUp(self):
         self.__cybos_talker__ = CybosTalker()
-        self.test_stock_name = '카카오톡'
+        # self.test_stock_name = '카카오톡'
+        self.test_stock_name = '일동홀딩스'
         # self.test_stock_name = '삼성전자'
-        self.test_stock_code = 'A035720'
+        # self.test_stock_code = 'A035720'
+        self.test_stock_code = 'A000230'
         # self.test_stock_code = 'A005930'
         self.today = int(datetime.today().strftime('%Y%m%d'))
         self.yesterday = int((datetime.today() -timedelta(1)).strftime('%Y%m%d'))

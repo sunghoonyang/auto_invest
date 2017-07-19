@@ -148,5 +148,15 @@ class CybosTalker(object):
         stk_chrt.drop(['index'], inplace=True, errors='ignore')
         return stk_chrt
 
+    def get_ten_days_min_by_min(self, stock, req_type, *stock_chart_args):
+        volume_param = {
+            '6': 'm',
+            '10': '1'}
+        stk_chrt = self.get_chart_as_dataframe(stock, req_type, *stock_chart_args, **volume_param)
+        # stk_chrt.sort_values('Date', inplace=True)
+        stk_chrt.reset_index(inplace=True)
+        stk_chrt.drop(['index'], inplace=True, errors='ignore')
+        return stk_chrt
+
 if __name__ == '__main__':
     pass

@@ -249,15 +249,6 @@ class MyStrategy(bt.Strategy):
             self.buy(exectype=bt.Order.Limit, price=plimit, valid=valid)
 
 
-from __future__ import (absolute_import, division, print_function,
-                        unicode_literals)
-
-import argparse
-import datetime
-
-import backtrader as bt
-
-
 class TALibStrategy(bt.Strategy):
     params = (('ind', 'sma'), ('doji', True),)
 

@@ -45,11 +45,11 @@ class TestCybosTalker(unittest.TestCase):
         df = self.test_obj.get_bt_dataframe(self.test_stock_code, 'range', start_date, self.today)
         print(df)
 
+    # @unittest.skip
+    def test_05_get_ten_days_min_by_min(self):
+        start_date = self.month_ago
+        df = self.test_obj.get_ten_days_min_by_min(self.test_stock_code, 'range', start_date, self.today)
+        print(df)
+
 if __name__ == '__main__':
-    suite = unittest.TestSuite()
-    suite.addTest(TestCybosTalker("setUp"))
-    suite.addTest(TestCybosTalker("test_04_get_bt_dataframe"))
-    suite.addTest(TestCybosTalker("tearDown"))
-    runner = unittest.TextTestRunner()
-    runner.run(suite)
-    # unittest.main()
+    unittest.main()

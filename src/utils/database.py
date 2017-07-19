@@ -2,6 +2,7 @@ from datetime import datetime
 import pandas as pd
 from sqlalchemy import create_engine
 from src.cybos.cybos_talker import CybosTalker
+import os
 
 
 class dbMeta(object):
@@ -10,8 +11,8 @@ class dbMeta(object):
         conn_args = dict(host='localhost',
                          user='root',
                          port=3306,
-                         password='Admin1234',
-                         db='cybos',
+                         password=os.getenv('MYSQL_CYBOS_PW'),
+                         db=os.getenv('MYSQL_CYBOS_DB'),
                          charset='utf8mb4',
                          )
         conn_str = 'mysql+pymysql://{user}:{password}@{host}:{port}/{db}?charset={charset}'.format(**conn_args)
@@ -25,6 +26,7 @@ class dbMeta(object):
         try:
             cur.execute(sql)
             res = cur.fetchall()
+            conn.commit()
         except Exception as e:
             cur.rollback()
             print(e)
@@ -147,9 +149,9 @@ class dbMeta(object):
             `종목코드`,
             `종목명`,
             `주식시장타입` 
-        FROM cybos.dim_krx_stock
+        FROM dim_krx_stock
         WHERE 1=1
-        -- AND use_yn = 'Y'
+        AND use_yn = 'Y'
         {stock_type}
         GROUP BY 1, 2, 3
         """
@@ -163,14 +165,15 @@ class dbMeta(object):
     def get_krx_latest_data(cls):
         sql = """SELECT 
             *
-        FROM cybos.krx_timeconclude_history
+        FROM krx_timeconclude_history
         WHERE date(time) = (
             SELECT 
                 max(date(time))
-            FROM cybos.krx_timeconclude_history
+            FROM krx_timeconclude_history
         )
         ;
         """
         engine = dbMeta.get_mysql_engine()
         snapshot = pd.read_sql(sql, engine)
         return snapshot
+

@@ -9,6 +9,10 @@ import urllib.request
 import xml.etree.ElementTree as ET
 import pandas as pd
 from src.utils.database import dbMeta
+import logging
+
+logger = logging.getLogger('krx')
+
 
 class KrxApiTalker(object):
     @classmethod
@@ -69,24 +73,60 @@ class KrxApiTalker(object):
                 if k.lower() not in update_tbs:
                     continue
                 if len(v) == 0:
-                    print('%s returned an empty data set.' % stock_name)
+                    logger.debug('%s returned an empty data set.' % stock_name)
                     break
                 stock_cd = {'item_cd': [c] * len(v)}
-                df = pd.concat([pd.DataFrame(data=stock_cd, index=list(range(0, len(v))))
-                                , pd.DataFrame(data=v)]
-                                , axis=1
-                )
+                df = pd.concat([pd.DataFrame(data=stock_cd, index=list(range(0, len(v)))), pd.DataFrame(data=v)]
+                               , axis=1)
                 master = df_dict[k]
                 df_dict[k] = master.append(df, ignore_index=True)
         engine = dbMeta.get_mysql_engine()
         rc = {}
+        target_tb_dict = {
+            'tbl_timeconclude': {'tb_nm': 'krx_timeconclude_today', 'dt_col': 'time'}
+            , 'tbl_dailystock': {'tb_nm': 'krx_dailystock_today', 'dt_col': 'day_Date'}
+        }
         for tb, df in df_dict.items():
+            logger.debug('replacing {tb}'.format(tb=tb.lower()))
             df.to_sql(tb.lower()
-                        , engine
-                        , if_exists='append'
-                        , index=False
-                        )
+                      , engine
+                      , if_exists='replace'
+                      , index=False
+                      )
+            with engine.connect() as con:
+                con.execute(
+                    "ALTER TABLE `{tb}` modify {dt_col} VARCHAR(64);"
+                    "ALTER TABLE {tb} ADD PRIMARY KEY (item_cd, {dt_col}) ;".format(
+                        tb=tb.lower()
+                        , dt_col=target_tb_dict[tb.lower()]['dt_col']
+                    )
+                )
+
+            logger.debug('%d inserted to %s'% (df.shape[0], tb.lower()))
+            join_insert_sql = """
+            INSERT INTO cybos.{tgt}
+            SELECT 
+                s.* 
+            FROM cybos.{src} s 
+            LEFT OUTER JOIN cybos.{tgt} t
+            ON s.item_cd = t.item_cd
+            AND s.{dt_col} = t.{dt_col}
+            WHERE t.item_cd IS NULL
+            ;
+            """.format(tgt=target_tb_dict[tb.lower()]['tb_nm']
+                       , src=tb.lower()
+                       , dt_col=target_tb_dict[tb.lower()]['dt_col'])
+            logger.debug('Inserted to {tgt} : {sql}'.format(
+                    tgt=target_tb_dict[tb.lower()]['tb_nm']
+                    , sql=join_insert_sql.strip().replace("\n", "")
+                )
+            )
+            dbMeta.execute_sql(engine, join_insert_sql)
             rc.update({tb: df.shape[0]})
+
+            # with engine.connect() as con:
+            #     con.execute('TRUNCATE TABLE {tb};'.format(tb=tb.lower()))
+            #     logger.debug('{tb} truncated'.format(tb=tb.lower()))
         return rc
 
 if __name__ == '__main__':

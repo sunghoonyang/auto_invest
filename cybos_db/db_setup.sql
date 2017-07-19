@@ -173,7 +173,7 @@ DROP TABLE IF EXISTS cybos.market_eye_history
 
 CREATE TABLE cybos.market_eye_history (
     SEQ BIGINT AUTO_INCREMENT,
-    `종목코드` varchar(64),
+    `종목코드` MEDIUMINT,
     `시간` SMALLINT,
     `대비부호` TINYINT,
     `전일대비` INT,
@@ -316,10 +316,11 @@ CREATE TABLE cybos.market_eye_history (
     `ELW_패리티` INT,
     `ELW_프리미엄` INT,
     `ELW_베리어` INT,
+    `우선주_yn` CHAR(1),
     QUERY_DT TIMESTAMP COMMENT '쿼리시간',
     LOAD_DT TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '적재시간',
     PRIMARY KEY (SEQ),
-    UNIQUE KEY `stock_at_t` (`종목코드`, `현지날짜`, `시간`)
+    UNIQUE KEY `stock_at_t` (`종목코드`, `우선주_yn`, `현지날짜`, `시간`)
 )
 TABLESPACE ts_cybos_1 ROW_FORMAT=COMPRESSED KEY_BLOCK_SIZE=8;
 ;
@@ -344,14 +345,17 @@ select
 	group by 1, 2
     ) l
 ;
-CREATE OR REPLACE VIEW cybos.vw_market_eye_yesterday
+CREATE OR REPLACE VIEW cybos.vw_market_eye_latest
 AS
 SELECT
 	*
 FROM
 	cybos.market_eye_history
 WHERE
-	`현지날짜` = ADDDATE(CURRENT_DATE(), INTERVAL -1 DAY)
+	`현지날짜` = (
+	SELECT max(`현지날짜`)
+	FROM cybos.market_eye_history
+	)
 ORDER BY `종목코드`, `현지날짜`, `시간` ASC
 ;
 
@@ -364,8 +368,12 @@ CREATE TABLESPACE `ts_krx_1` ADD DATAFILE 'ts_krx_1.ibd' FILE_BLOCK_SIZE = 8192 
 CREATE TABLE cybos.dim_krx_stock (
 	`종목코드` int,
     `종목명` varchar(128),
+    `업종코드` mediumint,
+    `업종` varchar(256),
 	`주식시장타입` varchar(48),
-    PRIMARY KEY (`종목코드`)
+    use_yn char(1) default 'N',
+    PRIMARY KEY (`종목코드`),
+    INDEX `indus_cd` (`업종코드`)
 )
 ;
 
@@ -380,7 +388,8 @@ CREATE TABLE cybos.`tbl_dailystock` (
   `day_Start` varchar(128) DEFAULT NULL,
   `day_Volume` varchar(128) DEFAULT NULL,
   `day_getAmount` varchar(128) DEFAULT NULL,
-  `day_getDebi` varchar(128) DEFAULT NULL
+  `day_getDebi` varchar(128) DEFAULT NULL,
+  UNIQUE KEY `stock_at_t` (`item_cd`, `day_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8
 ;
 
@@ -393,8 +402,37 @@ CREATE TABLE `tbl_timeconclude` (
   `buyprice` varchar(255) DEFAULT NULL,
   `negoprice` varchar(255) DEFAULT NULL,
   `sellprice` varchar(255) DEFAULT NULL,
-  `time` varchar(255) DEFAULT NULL
+  `time` varchar(255) DEFAULT NULL,
+  UNIQUE KEY(`item_cd`, `time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8
+;
+
+CREATE TABLE cybos.krx_dailystock_today (
+    `item_cd` MEDIUMINT NOT NULL,
+    `day_Date` TIMESTAMP NOT NULL,
+    `day_Dungrak` SMALLINT,
+    `day_EndPrice` numeric(11, 2),
+    `day_High` numeric(11, 2),
+    `day_Low` numeric(11, 2),
+    `day_Start` numeric(11, 2),
+    `day_Volume` numeric(11, 2),
+    `day_getAmount`BIGINT,
+    `day_getDebi` MEDIUMINT,
+    PRIMARY KEY `stock_at_t` (`item_cd`, `day_date`)
+)
+;
+
+CREATE TABLE cybos.krx_timeconclude_today (
+    `item_cd` mediumint NOT NULL,
+    `Debi` SMALLINT,
+    `Dungrak` TINYINT,
+    `amount` INT,
+    `buyprice` decimal(11, 2),
+    `negoprice` decimal(11, 2),
+    `sellprice` decimal(11, 2),
+    `time` varchar(255) NOT NULL,
+    PRIMARY KEY(`item_cd`, `time`)
+)
 ;
 
 CREATE TABLE cybos.krx_dailystock_history (

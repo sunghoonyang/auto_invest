@@ -6,13 +6,16 @@ from src.utils.database import dbMeta
 from datetime import date, datetime, timedelta
 from sqlalchemy.exc import IntegrityError
 import logging
-log_dir = """C:\\Users\\sh\\Documents\\devbox\\log\\cybos"""
 import os
 
 today = date.today()
 
 
 """     LOGGER INSTANCE     """
+log_dir = """C:\\Users\\sh\\Documents\\devbox\\log\\cybos\\%s""" % today.strftime('%Y-%m-%d')
+if not os.path.exists(log_dir):
+    os.makedirs(log_dir)
+
 log_loc = os.path.join(log_dir, 'cybos_api_call_%s_%d.log' % (today.strftime('%Y-%m-%d'), os.getpid()))
 formatter = logging.Formatter("%(asctime)s: %(levelname)s - [%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
                               , "%Y-%m-%d %H:%M:%S")
@@ -33,7 +36,7 @@ if today.weekday() in (5, 6):
     logger.error("does not operate on the weekends.")
     exit()
 
-last_etl_dt = today - timedelta(days=3) if today.weekday() == 1 else today - timedelta(days=1)
+last_etl_dt = today - timedelta(days=3) if today.weekday() == 0 else today - timedelta(days=1)
 
 """     SET UP DATE PARAMS    """
 market_open = datetime.combine(today, datetime.min.time()) + timedelta(hours=9)

@@ -1,6 +1,6 @@
 import unittest
 from datetime import datetime, timedelta
-from src.krx.api_to_db import KrxApiTalker as krx
+from src.krx.krx_api_talker import KrxApiTalker as krx
 
 
 class TestApiToDb(unittest.TestCase):
