@@ -9,12 +9,22 @@ import urllib.request
 import xml.etree.ElementTree as ET
 import pandas as pd
 from src.utils.database import dbMeta
+from sqlalchemy import Table
+from datetime import date
 import logging
 
 logger = logging.getLogger('krx')
 
 
 class KrxApiTalker(object):
+    _STOCK_LIST = None
+
+    @classmethod
+    def get_krx_stock_list(cls):
+        if cls._STOCK_LIST is None:
+            cls._STOCK_LIST = dbMeta.get_krx_stock_list('코스닥')
+        return cls._STOCK_LIST
+
     @classmethod
     def call_krx_api(cls, code):
         code_request_url = 'http://asp1.krx.co.kr/servlet/krx.asp.XMLSiseEng'
@@ -30,7 +40,7 @@ class KrxApiTalker(object):
             response_body = response.read()
             return response_body
         else:
-            print("Error Code:" + rescode)
+            logger.error("Error Code:" + rescode)
             raise
 
     @classmethod
@@ -41,7 +51,7 @@ class KrxApiTalker(object):
         try:
             root = ET.XML(xml_data.strip())
         except ET.ParseError as e:
-            print(str(e))
+            logger.error(str(e))
             return None
         all_records = {}
         for child in [child for child in root if child.tag.lower() in update_tbs]:
@@ -60,7 +70,7 @@ class KrxApiTalker(object):
 
     @classmethod
     def api_to_mysql(cls, update_tbs):
-        code_df = dbMeta.get_krx_stock_list('코스닥')
+        code_df = cls.get_krx_stock_list()
         codes = code_df['종목코드']
         df_dict = dict(zip(update_tbs, [pd.DataFrame()] * len(update_tbs)))
         for c in codes:
@@ -80,38 +90,40 @@ class KrxApiTalker(object):
                                , axis=1)
                 master = df_dict[k]
                 df_dict[k] = master.append(df, ignore_index=True)
+
+        """TIME STRING TO DATETIME OBJ"""
+        df_timeconclude = df_dict['tbl_timeconclude']
+        df_timeconclude['time'] = df_timeconclude['time'].apply(lambda x: " ".join([date.today().strftime('%Y-%m-%d'), x]))
+        df_dict['tbl_timeconclude'] =  df_timeconclude
+
         engine = dbMeta.get_mysql_engine()
         rc = {}
         target_tb_dict = {
             'tbl_timeconclude': {'tb_nm': 'krx_timeconclude_today', 'dt_col': 'time'}
             , 'tbl_dailystock': {'tb_nm': 'krx_dailystock_today', 'dt_col': 'day_Date'}
         }
+
+        metadata = dbMeta.get_metadata()
         for tb, df in df_dict.items():
             logger.debug('replacing {tb}'.format(tb=tb.lower()))
             df.to_sql(tb.lower()
                       , engine
-                      , if_exists='replace'
+                      , if_exists='append'
                       , index=False
                       )
-            with engine.connect() as con:
-                con.execute(
-                    "ALTER TABLE `{tb}` modify {dt_col} VARCHAR(64);"
-                    "ALTER TABLE {tb} ADD PRIMARY KEY (item_cd, {dt_col}) ;".format(
-                        tb=tb.lower()
-                        , dt_col=target_tb_dict[tb.lower()]['dt_col']
-                    )
-                )
 
-            logger.debug('%d inserted to %s'% (df.shape[0], tb.lower()))
+            logger.debug('%d inserted to %s' % (df.shape[0], tb.lower()))
             join_insert_sql = """
             INSERT INTO cybos.{tgt}
             SELECT 
-                s.* 
+                s.*
             FROM cybos.{src} s 
             LEFT OUTER JOIN cybos.{tgt} t
             ON s.item_cd = t.item_cd
             AND s.{dt_col} = t.{dt_col}
-            WHERE t.item_cd IS NULL
+            WHERE t.{dt_col} IS NULL
+            ;
+            TRUNCATE TABLE cybos.{src}
             ;
             """.format(tgt=target_tb_dict[tb.lower()]['tb_nm']
                        , src=tb.lower()
@@ -123,11 +135,8 @@ class KrxApiTalker(object):
             )
             dbMeta.execute_sql(engine, join_insert_sql)
             rc.update({tb: df.shape[0]})
-
-            # with engine.connect() as con:
-            #     con.execute('TRUNCATE TABLE {tb};'.format(tb=tb.lower()))
-            #     logger.debug('{tb} truncated'.format(tb=tb.lower()))
         return rc
+
 
 if __name__ == '__main__':
     pass

@@ -1,8 +1,12 @@
 from datetime import datetime
 import pandas as pd
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, MetaData
 from src.cybos.cybos_talker import CybosTalker
 import os
+import logging
+
+logger_cybos = logging.getLogger('cybos')
+logger_krx = logging.getLogger('krx')
 
 
 class dbMeta(object):
@@ -18,6 +22,10 @@ class dbMeta(object):
         conn_str = 'mysql+pymysql://{user}:{password}@{host}:{port}/{db}?charset={charset}'.format(**conn_args)
         engine = create_engine(conn_str, echo=False)
         return engine
+
+    @classmethod
+    def get_metadata(cls):
+        return MetaData()
 
     @classmethod
     def execute_sql(cls, engine, sql):
@@ -157,6 +165,7 @@ class dbMeta(object):
         """
         stock_type = "AND  `주식시장타입` = '{type}'".format(type=type) if type else ''
         sql = sql.format(stock_type=stock_type)
+        logger_krx.debug(sql)
         engine = dbMeta.get_mysql_engine()
         df = pd.read_sql(sql, engine)
         return df
@@ -174,6 +183,7 @@ class dbMeta(object):
         ;
         """
         engine = dbMeta.get_mysql_engine()
+        logger_krx.debug(sql)
         snapshot = pd.read_sql(sql, engine)
         return snapshot
 

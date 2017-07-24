@@ -62,13 +62,13 @@ BEGIN
         ;
         DELETE FROM h
         USING cybos.krx_timeconclude_history AS h INNER JOIN `cybos`.`krx_timeconclude_today` AS t
-        WHERE h.code = t.item_cd AND h.`time` = timestamp(concat(ADDDATE(curdate(), -1), ' ', t.`time`))
+        WHERE h.code = t.item_cd AND h.`time` = t.`time`
         ;
         INSERT INTO cybos.krx_timeconclude_history
             (`code`, `time`, Debi, Dungrak, amount, buyprice, negoprice, sellprice)
         SELECT
             `krx_timeconclude_today`.`item_cd`,
-            timestamp(concat(ADDDATE(curdate(), -1), ' ', `time`)) ,
+            `krx_timeconclude_today`.`time`,
             `krx_timeconclude_today`.`Debi`,
             `krx_timeconclude_today`.`Dungrak`,
             `krx_timeconclude_today`.`amount`,

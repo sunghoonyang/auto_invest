@@ -393,8 +393,10 @@ CREATE TABLE cybos.`tbl_dailystock` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8
 ;
 
+DROP TABLE IF EXISTS `cybos`.`tbl_timeconclude`
+;
 -- for data ingestion from api
-CREATE TABLE `tbl_timeconclude` (
+CREATE TABLE `cybos`.`tbl_timeconclude` (
   `item_cd` varchar(255) DEFAULT NULL,
   `Debi` varchar(255) DEFAULT NULL,
   `Dungrak` varchar(255) DEFAULT NULL,
@@ -402,7 +404,7 @@ CREATE TABLE `tbl_timeconclude` (
   `buyprice` varchar(255) DEFAULT NULL,
   `negoprice` varchar(255) DEFAULT NULL,
   `sellprice` varchar(255) DEFAULT NULL,
-  `time` varchar(255) DEFAULT NULL,
+  `time` TIMESTAMP,
   UNIQUE KEY(`item_cd`, `time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8
 ;
@@ -430,7 +432,7 @@ CREATE TABLE cybos.krx_timeconclude_today (
     `buyprice` decimal(11, 2),
     `negoprice` decimal(11, 2),
     `sellprice` decimal(11, 2),
-    `time` varchar(255) NOT NULL,
+    `time` TIMESTAMP,
     PRIMARY KEY(`item_cd`, `time`)
 )
 ;
