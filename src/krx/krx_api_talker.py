@@ -10,6 +10,7 @@ import xml.etree.ElementTree as ET
 import pandas as pd
 from src.utils.database import dbMeta
 from sqlalchemy import Table
+from sqlalchemy.exc import IntegrityError
 from datetime import date
 import logging
 
@@ -28,7 +29,9 @@ class KrxApiTalker(object):
     @classmethod
     def call_krx_api(cls, code):
         code_request_url = 'http://asp1.krx.co.kr/servlet/krx.asp.XMLSiseEng'
-        code = str(np.asscalar(code))
+        if type(code) is not int:
+            code = np.asscalar(code)
+        code = str(code)
         code = '0' * (6 - len(code)) + code
         code_request_url = "%s?code=%s" % (code_request_url, code)
         opener = urllib.request.build_opener()
@@ -103,21 +106,23 @@ class KrxApiTalker(object):
             , 'tbl_dailystock': {'tb_nm': 'krx_dailystock_today', 'dt_col': 'day_Date'}
         }
 
-        metadata = dbMeta.get_metadata()
         for tb, df in df_dict.items():
             logger.debug('replacing {tb}'.format(tb=tb.lower()))
-            df.to_sql(tb.lower()
-                      , engine
-                      , if_exists='append'
-                      , index=False
-                      )
+            try:
+                df.to_sql(tb.lower()
+                          , engine
+                          , if_exists='append'
+                          , index=False
+                          )
+            except IntegrityError as e:
+                logger.error('sqlalchemy.IntegrityError while inserting to cybos.{src}. Joing inserting to today table without queried data.'.format(src=tb.lower()))
 
             logger.debug('%d inserted to %s' % (df.shape[0], tb.lower()))
             join_insert_sql = """
             INSERT INTO cybos.{tgt}
             SELECT 
                 s.*
-            FROM cybos.{src} s 
+            FROM cybos.{src} s
             LEFT OUTER JOIN cybos.{tgt} t
             ON s.item_cd = t.item_cd
             AND s.{dt_col} = t.{dt_col}

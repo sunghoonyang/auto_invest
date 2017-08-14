@@ -1,6 +1,9 @@
 from datetime import datetime, timedelta
 from functools import partial
 import numpy as np
+import subprocess
+import os
+import time
 import pandas as pd
 from src.cybos.cybos_helpers import *
 from src.cybos.stock_chart_config import StockChartConfig as config
@@ -14,12 +17,35 @@ class CybosTalker(object):
     def get_df_options(cls, option_type, **kwargs):
         return config.get_df_options(option_type, **kwargs)
 
+    @staticmethod
+    def connected_to_cybos():
+        import win32com.client
+        return win32com.client.Dispatch("CpUtil.CpCybos").IsConnect == 1
+
+    @staticmethod
+    def __hts_running():
+        p = subprocess.Popen('TASKLIST /FI "imagename eq Bos.exe"', stdout=subprocess.PIPE)
+        res = p.communicate()[0]
+        return 'Bos.exe' in str(res)
+
+    @staticmethod
+    def retry_connection():
+        if CybosTalker.__hts_running():
+            os.system("TASKKILL /F /IM Bos.exe")
+            time.sleep(10)
+        ahk_path = "C:\\Users\\sh\\Documents\\devbox\\ahk"
+        ahk_exe_path = "C:\\Program Files\\AutoHotkey\\AutoHotkey.exe"
+        subprocess.call([ahk_exe_path, os.path.join(ahk_path, 'cp_start.ahk')])
+        time.sleep(10)
+        subprocess.call([ahk_exe_path, os.path.join(ahk_path, "cp_login.ahk")])
+
     def __init__(self):
         import win32com.client
         self.instCpCybos = win32com.client.Dispatch("CpUtil.CpCybos")
         self.instCpCodeMgr = win32com.client.Dispatch("CpUtil.CpCodeMgr")
         self.instStockChart = win32com.client.Dispatch("CpSysDib.StockChart")
         self.instMarketEye = win32com.client.Dispatch("CpSysDib.MarketEye")
+
 
     @assert_cybos_connection
     def __block_request(self, chart_type, **option_dict):
@@ -152,11 +178,24 @@ class CybosTalker(object):
         volume_param = {
             '6': 'm',
             '10': '1'}
-        stk_chrt = self.get_chart_as_dataframe(stock, req_type, *stock_chart_args, **volume_param)
-        # stk_chrt.sort_values('Date', inplace=True)
+        stk_chrt = self.get_chart_as_dataframe(stock, req_type,
+                                               *stock_chart_args, **volume_param)
         stk_chrt.reset_index(inplace=True)
         stk_chrt.drop(['index'], inplace=True, errors='ignore')
+
         return stk_chrt
 
+
+class CybosTrader:
+    def __init__(self):
+        import win32com.client
+        self.instCpTdUtil = win32com.client.Dispatch("CpTrade.CpTdUtil")
+        self.instCpTdUtil.TradeInit()
+        ahk_path = "C:\\Users\\sh\\Documents\\devbox\\ahk"
+        ahk_exe_path = "C:\\Program Files\\AutoHotkey\\AutoHotkey.exe"
+        subprocess.call(['runas', '/noprofile', '/user:Administrator', ahk_exe_path, os.path.join(ahk_path, 'cybos_trader_pwd_in.ahk')])
+        self.instCpTd0311 = win32com.client.Dispatch("CpTrade.CpTd0311")
+
+
 if __name__ == '__main__':
-    pass
+    ct = CybosTrader()

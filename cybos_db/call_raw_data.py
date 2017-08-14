@@ -4,6 +4,7 @@ from multiprocessing.pool import Pool
 
 sys.path.append("C:\\Users\\sh\\Documents\\devbox\\github\\auto_invest")
 import time
+from src.cybos.cybos_talker import CybosTalker as ct
 from src.utils.database import dbMeta
 from multiprocessing import Pool, TimeoutError
 from datetime import date, datetime, timedelta
@@ -44,15 +45,16 @@ if __name__ == '__main__':
 
     """     SET UP DATE PARAMS    """
     market_open = datetime.combine(today, datetime.min.time()) + timedelta(hours=9)
-    market_close = datetime.combine(today, datetime.min.time()) + timedelta(hours=23)
+    market_close = datetime.combine(today, datetime.min.time()) + timedelta(hours=16)
 
     """     REMOVE YESTERDAY'S DATA FROM cybos.market_eye_today and INSERT TO cybos.market_eye_history     """
-    # logger.info('Migrating data from cybos.market_eye_today to cybos.market_eye_history.')
-    # inserted = dbMeta.call_proc('sp_market_eye_today_to_history', (int(last_etl_dt.strftime('%Y%m%d')),))
-    # logger.info('%d rows inserted to cybos.market_eye_history.' % inserted[0])
+    logger.info('Migrating data from cybos.market_eye_today to cybos.market_eye_history.')
+    inserted = dbMeta.call_proc('sp_market_eye_today_to_history')
+    logger.info('%s rows inserted to cybos.market_eye_history.' % str(inserted[0]))
+
+    pool = Pool(1)
 
     while True:
-        pool = Pool(1)
         now = datetime.now()
         next_iter = now.replace(second=0, microsecond=0) + timedelta(minutes=1)
         before_market = True if now < market_open else False
@@ -60,11 +62,13 @@ if __name__ == '__main__':
             else False
 
         if before_market:
-            time.sleep(100)
+            if not ct.connected_to_cybos():
+                ct.retry_connection()
+            time.sleep(1)
         elif mkt_is_open:
-            res = pool.apply_async(dbMeta.snapshot_market_eye_res)
+            res = pool.apply_async(dbMeta.snapshot_market_eye_res, ())
             try:
-                ins = res.get(1)
+                ins = res.get(100)
                 logger.info("%d inserted from API call." % ins)
                 while datetime.now() < next_iter:
                     time.sleep(1)
@@ -73,7 +77,7 @@ if __name__ == '__main__':
                 logger.error(str(e))
             except AssertionError as e:
                 logger.error(str(e))
-                exit(1)
+                ct.retry_connection()
             except TimeoutError:
                 logger.error('***********************API Call timeout.***********************')
         else:

@@ -5,8 +5,7 @@ from src.cybos.cybos_talker import CybosTalker
 import os
 import logging
 
-logger_cybos = logging.getLogger('cybos')
-logger_krx = logging.getLogger('krx')
+logger = logging.getLogger(__name__)
 
 
 class dbMeta(object):
@@ -36,7 +35,7 @@ class dbMeta(object):
             res = cur.fetchall()
             conn.commit()
         except Exception as e:
-            cur.rollback()
+            conn.rollback()
             print(e)
             res = None
 
@@ -91,8 +90,10 @@ class dbMeta(object):
         for i in range(0, batch_size):
             lower, upper = i * 200, min((i + 1) * 200, len(global_stocks))
             df = dbMeta.get_market_eye_res(global_stocks[lower:upper])
-            df['시간'] = df['시간'].apply(pd.to_numeric)
-            pks = ['종목코드', '시간']
+            df['time'] = df['현지날짜'].apply(lambda x: str(x)) + df['시간'].apply(lambda x: ('0' + str(x))[-4:])
+            df['time'] = df['time'].apply(lambda x: datetime.strptime(x, '%Y%m%d%H%M'))
+            df.drop(['시간', '현지날짜'], inplace=True, axis=1, errors='ignore')
+            pks = ['종목코드', 'time']
             """
             TODO: do merge once by first appending all dataframes,
             and left outer join with dups AFTER the for loop iteration
@@ -120,7 +121,7 @@ class dbMeta(object):
     def get_today_data(cls, pk_only=False):
         pk_only_stmt = """
         `종목코드`
-        , `시간`
+        , `time`
         , 1 as 현재가
         """
         select_stmt = '*' if not pk_only else pk_only_stmt
@@ -165,7 +166,7 @@ class dbMeta(object):
         """
         stock_type = "AND  `주식시장타입` = '{type}'".format(type=type) if type else ''
         sql = sql.format(stock_type=stock_type)
-        logger_krx.debug(sql)
+        logger.debug(sql)
         engine = dbMeta.get_mysql_engine()
         df = pd.read_sql(sql, engine)
         return df
@@ -183,7 +184,7 @@ class dbMeta(object):
         ;
         """
         engine = dbMeta.get_mysql_engine()
-        logger_krx.debug(sql)
+        logger.debug(sql)
         snapshot = pd.read_sql(sql, engine)
         return snapshot
 

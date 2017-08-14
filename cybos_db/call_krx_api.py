@@ -37,23 +37,21 @@ if __name__ == '__main__':
     ch.setFormatter(formatter)
     logger.addHandler(ch)
 
+    if today.weekday() in (5, 6):
+        print("does not operate on the weekends.")
+        exit()
+
     """     REMOVE YESTERDAY'S DATA FROM cybos.market_eye_today and INSERT TO cybos.market_eye_history     """
     logger.info('Migrating data krx data to history table.')
     inserted = dbMeta.call_proc('sp_krx_today_to_history')
     logger.info('%d inserted to krx_timeconclude_history. %d inserted to  krx_dailystock_history.' % inserted[0])
 
-    if today.weekday() in (5, 6):
-        print("does not operate on the weekends.")
-        exit()
-
-
     """     SET UP DATE PARAMS    """
     market_open = datetime.combine(today, datetime.min.time()) + timedelta(hours=9)
     market_close = datetime.combine(today, datetime.min.time()) + timedelta(hours=18)
 
-    """      TIMEOUT SETUP       """
+    pool = Pool(1)
     while True:
-        pool = Pool(1)
         now = datetime.now()
         before_market = True if now < market_open else False
         mkt_is_open = True if market_open <= now <= market_close \
@@ -64,7 +62,7 @@ if __name__ == '__main__':
         elif mkt_is_open:
             res = pool.apply_async(KrxApiTalker.api_to_mysql, [update_tbs])
             try:
-                d = res.get(120)
+                d = res.get(600)
                 if 'tbl_dailystock' in update_tbs:
                     "   After the first iteration tbl_dailystock is unnecessary     "
                     update_tbs.remove('tbl_dailystock')

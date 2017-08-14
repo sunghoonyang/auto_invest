@@ -45,11 +45,15 @@ class TestCybosTalker(unittest.TestCase):
         df = self.test_obj.get_bt_dataframe(self.test_stock_code, 'range', start_date, self.today)
         print(df)
 
-    # @unittest.skip
+    @unittest.skip
     def test_05_get_ten_days_min_by_min(self):
         start_date = self.month_ago
         df = self.test_obj.get_ten_days_min_by_min(self.test_stock_code, 'range', start_date, self.today)
         print(df)
+
+    # @unittest.skip
+    def test_06_retry_connection(self):
+        CybosTalker.retry_connection()
 
 if __name__ == '__main__':
     unittest.main()
